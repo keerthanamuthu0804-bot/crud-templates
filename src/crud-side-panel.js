@@ -1,6 +1,6 @@
-import { setup, el, buildList, buildForm } from "./common.js";
+import { setup, el, buildList, buildForm, createRenderer } from "./common.js";
 
-export default function mount(container, { metadata, runtime }) {
+function mount(container, { metadata, runtime }) {
   const app = setup(metadata, runtime);
   let editingId = null;
 
@@ -8,7 +8,10 @@ export default function mount(container, { metadata, runtime }) {
     onAdd: () => open(null),
     onEdit: open,
     onDelete: (id) => {
-      if (app.remove(id)) list.render(app.rows);
+      if (app.remove(id)) {
+        list.render(app.rows);
+        if (id === editingId) close();
+      }
     },
   });
 
@@ -45,3 +48,5 @@ export default function mount(container, { metadata, runtime }) {
   list.render(app.rows);
   return { destroy: () => container.replaceChildren() };
 }
+
+export default createRenderer(mount, ["CRUD-SIDE-PANEL"]);

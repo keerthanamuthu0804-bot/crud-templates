@@ -1,11 +1,19 @@
-// build.js
 import { build } from "vite";
 
-const names = ["crud-side-panel", "crud-modal", "crud-inline", "crud-page"];
+const names = [
+  "crud-side-panel",
+  "crud-modal",
+  "crud-inline",
+  "crud-page",
+  "graph",
+  "wizard",
+  "detail",
+  "tabs",
+];
 
 for (const name of names) {
   await build({
-    configFile: false, 
+    configFile: false,
     publicDir: false,
     build: {
       outDir: "dist-templates",

@@ -1,12 +1,16 @@
-import { setup, el, makeInput } from "./common.js";
-
-export default function mount(container, { metadata, runtime }) {
+import {
+  setup,
+  el,
+  makeInput,
+  createRenderer,
+  NONE_ALLOWED,
+} from "./common.js";
+function mount(container, { metadata, runtime }) {
   const app = setup(metadata, runtime);
-  let editing = null; // null | "new" | row id
-
+  const perms = metadata.permissions || NONE_ALLOWED;
+  let editing = null;
   const btn = (cls, text, fn) =>
     el("button", cls, { type: "button", textContent: text, onclick: fn });
-
   const tbody = el("tbody", "tbody");
   const empty = el("p", "empty", { textContent: "No records yet." });
   const table = el(
@@ -32,15 +36,18 @@ export default function mount(container, { metadata, runtime }) {
     "header",
     {},
     el("h2", "title", { textContent: metadata.title }),
-    btn("btn", "Add", () => {
-      editing = "new";
-      render();
-    }),
+    ...(perms.create
+      ? [
+          btn("btn", "Add", () => {
+            editing = "new";
+            render();
+          }),
+        ]
+      : []),
   );
   header.style.display = "flex";
   header.style.justifyContent = "space-between";
   const root = el("section", "main", {}, header, table, empty);
-
   function viewRow(r) {
     return el(
       "tr",
@@ -53,17 +60,24 @@ export default function mount(container, { metadata, runtime }) {
         "td",
         "td",
         {},
-        btn("btn-link", "Edit", () => {
-          editing = r.id;
-          render();
-        }),
-        btn("btn-danger", "Delete", () => {
-          if (app.remove(r.id)) render();
-        }),
+        ...(perms.edit
+          ? [
+              btn("btn-link", "Edit", () => {
+                editing = r.id;
+                render();
+              }),
+            ]
+          : []),
+        ...(perms.delete
+          ? [
+              btn("btn-danger", "Delete", () => {
+                if (app.remove(r.id)) render();
+              }),
+            ]
+          : []),
       ),
     );
   }
-
   function editRow(r) {
     const inputs = metadata.fields.map((f) => makeInput(f, r[f.name] ?? ""));
     const save = () => {
@@ -92,7 +106,6 @@ export default function mount(container, { metadata, runtime }) {
       ),
     );
   }
-
   function render() {
     tbody.replaceChildren(
       ...(editing === "new" ? [editRow({})] : []),
@@ -102,8 +115,9 @@ export default function mount(container, { metadata, runtime }) {
     table.hidden = !showTable;
     empty.hidden = showTable;
   }
-
   container.replaceChildren(root);
   render();
   return { destroy: () => container.replaceChildren() };
 }
+
+export default createRenderer(mount, ["CRUD-INLINE"]);

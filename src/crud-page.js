@@ -1,6 +1,6 @@
-import { setup, el, buildList, buildForm } from "./common.js";
+import { setup, el, buildList, buildForm, createRenderer } from "./common.js";
 
-export default function mount(container, { metadata, runtime }) {
+function mount(container, { metadata, runtime }) {
   const app = setup(metadata, runtime);
   let editingId = null;
 
@@ -53,3 +53,5 @@ export default function mount(container, { metadata, runtime }) {
   list.render(app.rows);
   return { destroy: () => container.replaceChildren() };
 }
+
+export default createRenderer(mount, ["CRUD-PAGE"]);
