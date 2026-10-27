@@ -61,7 +61,7 @@ function normalize(context) {
   const screenId =
     meta.screenId ?? meta.screenKey ?? meta.screenName ?? meta.id ?? "screen";
 
-  // rows: metadata.data / context.data / context.rows, illana storage
+  // rows: metadata.data / context.data / context.rows,  storage
   let rows = meta.data ?? context?.data ?? context?.rows;
   if (!Array.isArray(rows)) {
     const key = chart.dataKey ?? `crud:${screenId}`;
@@ -77,10 +77,8 @@ function normalize(context) {
   }
   if (!Array.isArray(rows)) rows = [];
 
-  // x field: kudukkalaina first row-oda first key
   const xField = chart.xField ?? chart.x ?? Object.keys(rows[0] ?? {})[0];
 
-  // series: kudukkalaina numeric fields ellam
   let series =
     chart.series ?? chart.yFields ?? (chart.yField ? [chart.yField] : null);
   if (!series) {

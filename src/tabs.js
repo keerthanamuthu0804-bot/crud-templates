@@ -57,7 +57,7 @@ export default {
     }));
     items.forEach((it) => (it.panel.dataset.tabId = it.tab.id));
 
-    // active tab-ah mattum maathum (event illa)
+   
     function activate(i, focus = false) {
       items.forEach((it, k) => {
         const active = k === i;

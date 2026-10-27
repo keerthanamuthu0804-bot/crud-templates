@@ -7,7 +7,6 @@ const names = [
   "crud-page",
   "graph",
   "wizard",
-  "detail",
   "tabs",
 ];
 
