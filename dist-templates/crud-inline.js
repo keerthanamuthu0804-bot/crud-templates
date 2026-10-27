@@ -3,42 +3,59 @@ var e = {
 	create: !1,
 	edit: !1,
 	delete: !1
-}, t = {
-	list: (e) => JSON.parse(localStorage.getItem(e) || "[]"),
-	save: (e, t) => localStorage.setItem(e, JSON.stringify(t))
-}, n = (e, t, n = {}, ...r) => {
+}, t = (e, t, n = {}, ...r) => {
 	let i = document.createElement(e);
-	return i.className = "vc-" + t, Object.assign(i, n), i.append(...r), i;
-}, r = (e, t = "") => {
-	let r;
-	return r = e.type === "select" ? n("select", "input", {}, n("option", "option", {
+	return t && (i.className = t), Object.assign(i, n), i.append(...r), i;
+}, n = {
+	screenCard: "screen-card",
+	header: "screen-header",
+	title: "screen-title",
+	tableWrap: "table-container",
+	table: "data-table",
+	actions: "table-actions",
+	empty: "empty-state",
+	form: "dynamic-form",
+	field: "form-field",
+	label: "form-label",
+	control: "form-control",
+	formActions: "form-actions",
+	btn: {
+		primary: "primary-button",
+		secondary: "secondary-button",
+		danger: "danger-button"
+	}
+}, r = (e, r = "") => {
+	let i;
+	return i = e.type === "select" ? t("select", n.control, {}, t("option", "", {
 		value: "",
 		textContent: "Select"
-	}), ...e.options.map((e) => n("option", "option", {
+	}), ...e.options.map((e) => t("option", "", {
 		value: e,
 		textContent: e
-	}))) : e.type === "textarea" ? n("textarea", "input", { rows: 3 }) : n("input", "input", { type: e.type || "text" }), r.required = !!e.required, r.name = e.name, r.value = t, r;
+	}))) : e.type === "textarea" ? t("textarea", n.control, { rows: 3 }) : t("input", n.control, { type: e.type || "text" }), i.required = !!e.required, i.name = e.name, i.value = r, i;
 };
-function i(e, n = {}) {
-	let r = n.storage || t, i = n.toast || ((e) => console.log(e)), a = `crud:${e.screenId}`, o = r.list(a), s = (e) => {
-		o = e, r.save(a, o);
+function i(e, t = {}) {
+	let n = t.storage, r = t.toast || ((e) => console.log(e)), i = `crud:${e.screenId}`;
+	n || console.warn("[crud template] runtime.storage not provided by core app; data will not be saved.");
+	let a = n ? n.list(i) : [], o = (e) => {
+		a = e, n?.save(i, a);
 	};
 	return {
 		get rows() {
-			return o;
+			return a;
 		},
-		toast: i,
+		toast: r,
 		save(e, t) {
-			s(e == null ? [...o, {
+			o(e == null ? [...a, {
 				id: Date.now(),
 				...t
-			}] : o.map((n) => n.id === e ? {
+			}] : a.map((n) => n.id === e ? {
 				...n,
 				...t
-			} : n)), i("Saved");
+			} : n)), r("Saved");
 		},
 		remove(e) {
-			return confirm("Delete this record?") ? (s(o.filter((t) => t.id !== e)), i("Deleted"), !0) : !1;
+			return confirm("Delete this record?") ? (o(a.filter((t) => t.id !== e)), r("Deleted"), !0) : !1;
 		}
 	};
 }
@@ -80,7 +97,7 @@ function c(t) {
 		let e = r.allowedActions ?? r.AllowedActions ?? r.actions ?? r.permissions;
 		Array.isArray(e) && (r = e);
 	}
-	if (!r || typeof r != "object") return console.warn("[crud template] "), { ...e };
+	if (!r || typeof r != "object") return console.warn("[crud template] No permissions found in context; all actions disabled."), { ...e };
 	let i = {};
 	Array.isArray(r) ? r.forEach((e) => {
 		if (typeof e == "string") i[e.trim().toLowerCase()] = !0;
@@ -142,30 +159,30 @@ function u(e, t) {
 }
 //#endregion
 //#region src/crud-inline.js
-function d(t, { metadata: a, runtime: o }) {
-	let s = i(a, o), c = a.permissions || e, l = null, u = (e, t, r) => n("button", e, {
+function d(n, { metadata: a, runtime: o }) {
+	let s = i(a, o), c = a.permissions || e, l = null, u = (e, n, r) => t("button", e, {
 		type: "button",
-		textContent: t,
+		textContent: n,
 		onclick: r
-	}), d = n("tbody", "tbody"), f = n("p", "empty", { textContent: "No records yet." }), p = n("table", "table", {}, n("thead", "thead", {}, n("tr", "tr", {}, ...a.fields.map((e) => n("th", "th", { textContent: e.label })), n("th", "th"))), d), m = n("header", "header", {}, n("h2", "title", { textContent: a.title }), ...c.create ? [u("btn", "Add", () => {
+	}), d = t("tbody", "tbody"), f = t("p", "empty", { textContent: "No records yet." }), p = t("table", "table", {}, t("thead", "thead", {}, t("tr", "tr", {}, ...a.fields.map((e) => t("th", "th", { textContent: e.label })), t("th", "th"))), d), m = t("header", "header", {}, t("h2", "title", { textContent: a.title }), ...c.create ? [u("btn", "Add", () => {
 		l = "new", v();
 	})] : []);
 	m.style.display = "flex", m.style.justifyContent = "space-between";
-	let h = n("section", "main", {}, m, p, f);
+	let h = t("section", "main", {}, m, p, f);
 	function g(e) {
-		return n("tr", "tr", {}, ...a.fields.map((t) => n("td", "td", { textContent: e[t.name] ?? "" })), n("td", "td", {}, ...c.edit ? [u("btn-link", "Edit", () => {
+		return t("tr", "tr", {}, ...a.fields.map((n) => t("td", "td", { textContent: e[n.name] ?? "" })), t("td", "td", {}, ...c.edit ? [u("btn-link", "Edit", () => {
 			l = e.id, v();
 		})] : [], ...c.delete ? [u("btn-danger", "Delete", () => {
 			s.remove(e.id) && v();
 		})] : []));
 	}
 	function _(e) {
-		let t = a.fields.map((t) => r(t, e[t.name] ?? "")), i = () => {
-			if (!t.every((e) => e.reportValidity())) return;
-			let e = Object.fromEntries(a.fields.map((e, n) => [e.name, t[n].value]));
+		let n = a.fields.map((t) => r(t, e[t.name] ?? "")), i = () => {
+			if (!n.every((e) => e.reportValidity())) return;
+			let e = Object.fromEntries(a.fields.map((e, t) => [e.name, n[t].value]));
 			s.save(l === "new" ? null : l, e), l = null, v();
 		};
-		return n("tr", "tr vc-editing", {}, ...t.map((e) => n("td", "td", {}, e)), n("td", "td", {}, u("btn", "Save", i), u("btn-secondary", "Cancel", () => {
+		return t("tr", "tr vc-editing", {}, ...n.map((e) => t("td", "td", {}, e)), t("td", "td", {}, u("btn", "Save", i), u("btn-secondary", "Cancel", () => {
 			l = null, v();
 		})));
 	}
@@ -174,7 +191,7 @@ function d(t, { metadata: a, runtime: o }) {
 		let e = s.rows.length > 0 || l === "new";
 		p.hidden = !e, f.hidden = e;
 	}
-	return t.replaceChildren(h), v(), { destroy: () => t.replaceChildren() };
+	return n.replaceChildren(h), v(), { destroy: () => n.replaceChildren() };
 }
 var f = u(d, ["CRUD-INLINE"]);
 //#endregion

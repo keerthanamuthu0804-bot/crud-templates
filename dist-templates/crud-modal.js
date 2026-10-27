@@ -3,87 +3,91 @@ var e = {
 	create: !1,
 	edit: !1,
 	delete: !1
-}, t = {
-	list: (e) => JSON.parse(localStorage.getItem(e) || "[]"),
-	save: (e, t) => localStorage.setItem(e, JSON.stringify(t))
-}, n = (e, t, n = {}, ...r) => {
+}, t = (e, t, n = {}, ...r) => {
 	let i = document.createElement(e);
-	return i.className = "vc-" + t, Object.assign(i, n), i.append(...r), i;
-}, r = (e, t = "") => {
-	let r;
-	return r = e.type === "select" ? n("select", "input", {}, n("option", "option", {
+	return t && (i.className = t), Object.assign(i, n), i.append(...r), i;
+}, n = {
+	screenCard: "screen-card",
+	header: "screen-header",
+	title: "screen-title",
+	tableWrap: "table-container",
+	table: "data-table",
+	actions: "table-actions",
+	empty: "empty-state",
+	form: "dynamic-form",
+	field: "form-field",
+	label: "form-label",
+	control: "form-control",
+	formActions: "form-actions",
+	btn: {
+		primary: "primary-button",
+		secondary: "secondary-button",
+		danger: "danger-button"
+	}
+}, r = (e, r, i, { compact: a = !1, type: o = "button" } = {}) => {
+	let s = {
+		type: o,
+		textContent: r
+	};
+	return typeof i == "function" && (s.onclick = i), t("button", (n.btn[e] || n.btn.secondary) + (a ? " compact-button" : ""), s);
+}, i = (e, r = "") => {
+	let i;
+	return i = e.type === "select" ? t("select", n.control, {}, t("option", "", {
 		value: "",
 		textContent: "Select"
-	}), ...e.options.map((e) => n("option", "option", {
+	}), ...e.options.map((e) => t("option", "", {
 		value: e,
 		textContent: e
-	}))) : e.type === "textarea" ? n("textarea", "input", { rows: 3 }) : n("input", "input", { type: e.type || "text" }), r.required = !!e.required, r.name = e.name, r.value = t, r;
+	}))) : e.type === "textarea" ? t("textarea", n.control, { rows: 3 }) : t("input", n.control, { type: e.type || "text" }), i.required = !!e.required, i.name = e.name, i.value = r, i;
 };
-function i(e, n = {}) {
-	let r = n.storage || t, i = n.toast || ((e) => console.log(e)), a = `crud:${e.screenId}`, o = r.list(a), s = (e) => {
-		o = e, r.save(a, o);
+function a(e, t = {}) {
+	let n = t.storage, r = t.toast || ((e) => console.log(e)), i = `crud:${e.screenId}`;
+	n || console.warn("[crud template] runtime.storage not provided by core app; data will not be saved.");
+	let a = n ? n.list(i) : [], o = (e) => {
+		a = e, n?.save(i, a);
 	};
 	return {
 		get rows() {
-			return o;
+			return a;
 		},
-		toast: i,
+		toast: r,
 		save(e, t) {
-			s(e == null ? [...o, {
+			o(e == null ? [...a, {
 				id: Date.now(),
 				...t
-			}] : o.map((n) => n.id === e ? {
+			}] : a.map((n) => n.id === e ? {
 				...n,
 				...t
-			} : n)), i("Saved");
+			} : n)), r("Saved");
 		},
 		remove(e) {
-			return confirm("Delete this record?") ? (s(o.filter((t) => t.id !== e)), i("Deleted"), !0) : !1;
+			return confirm("Delete this record?") ? (o(a.filter((t) => t.id !== e)), r("Deleted"), !0) : !1;
 		}
 	};
 }
-function a(t, { onAdd: r, onEdit: i, onDelete: a }) {
-	let o = t.permissions || e, s = n("button", "btn", {
-		type: "button",
-		textContent: "Add",
-		onclick: r
-	}), c = n("tbody", "tbody"), l = n("p", "empty", { textContent: "No records yet." }), u = n("table", "table", {}, n("thead", "thead", {}, n("tr", "tr", {}, ...t.fields.map((e) => n("th", "th", { textContent: e.label })), n("th", "th"))), c), d = n("header", "header", {}, n("h2", "title", { textContent: t.title }), ...o.create ? [s] : []);
-	return d.style.display = "flex", d.style.justifyContent = "space-between", {
-		main: n("section", "main", {}, d, u, l),
+function o(i, { onAdd: a, onEdit: o, onDelete: s }) {
+	let c = i.permissions || e, l = t("tbody", ""), u = t("p", n.empty, { textContent: "No records yet." }), d = t("table", n.table, {}, t("thead", "", {}, t("tr", "", {}, ...i.fields.map((e) => t("th", "", { textContent: e.label })), t("th", "", { textContent: "Actions" }))), l), f = t("header", n.header, {}, t("h2", n.title, { textContent: i.title }), ...c.create ? [r("primary", "Add", a)] : []);
+	return {
+		main: t("section", n.screenCard, {}, f, t("div", n.tableWrap, {}, d), u),
 		render: (e) => {
-			c.replaceChildren(...e.map((e) => n("tr", "tr", {}, ...t.fields.map((t) => n("td", "td", { textContent: e[t.name] ?? "" })), n("td", "td", {}, ...o.edit ? [n("button", "btn-link", {
-				type: "button",
-				textContent: "Edit",
-				onclick: () => i(e)
-			})] : [], ...o.delete ? [n("button", "btn-danger", {
-				type: "button",
-				textContent: "Delete",
-				onclick: () => a(e.id)
-			})] : [])))), l.hidden = e.length > 0, u.hidden = e.length === 0;
+			l.replaceChildren(...e.map((e) => t("tr", "", {}, ...i.fields.map((n) => t("td", "", { textContent: e[n.name] ?? "" })), t("td", n.actions, {}, ...c.edit ? [r("secondary", "Edit", () => o(e), { compact: !0 })] : [], ...c.delete ? [r("danger", "Delete", () => s(e.id), { compact: !0 })] : [])))), u.hidden = e.length > 0, d.hidden = e.length === 0;
 		}
 	};
 }
-function o(e, { onSubmit: t, onCancel: i }) {
-	let a = {}, o = n("form", "form");
-	return o.style.display = "flex", o.style.flexDirection = "column", e.fields.forEach((e) => {
-		let t = r(e);
-		a[e.name] = t, o.append(n("label", "field", {}, n("span", "label", { textContent: e.label + (e.required ? " *" : "") }), t));
-	}), o.append(n("div", "actions", {}, n("button", "btn", {
-		type: "submit",
-		textContent: "Save"
-	}), n("button", "btn-secondary", {
-		type: "button",
-		textContent: "Cancel",
-		onclick: i
-	}))), o.onsubmit = (n) => {
-		n.preventDefault(), t(Object.fromEntries(e.fields.map((e) => [e.name, a[e.name].value])));
+function s(e, { onSubmit: a, onCancel: o }) {
+	let s = {}, c = t("form", n.form);
+	return e.fields.forEach((e) => {
+		let r = i(e);
+		s[e.name] = r, c.append(t("div", n.field, {}, t("label", n.label, { textContent: e.label + (e.required ? " *" : "") }), r));
+	}), c.append(t("div", n.formActions, {}, r("primary", "Save", null, { type: "submit" }), r("secondary", "Cancel", o))), c.onsubmit = (t) => {
+		t.preventDefault(), a(Object.fromEntries(e.fields.map((e) => [e.name, s[e.name].value])));
 	}, {
-		form: o,
-		fill: (t) => e.fields.forEach((e) => a[e.name].value = t ? t[e.name] ?? "" : ""),
-		focus: () => a[e.fields[0].name].focus()
+		form: c,
+		fill: (t) => e.fields.forEach((e) => s[e.name].value = t ? t[e.name] ?? "" : ""),
+		focus: () => s[e.fields[0].name].focus()
 	};
 }
-var s = {
+var c = {
 	string: "text",
 	text: "text",
 	number: "number",
@@ -97,8 +101,8 @@ var s = {
 	dropdown: "select",
 	lookup: "select"
 };
-function c(e) {
-	let t = e.name ?? e.fieldName ?? e.key ?? e.field, n = s[String(e.type ?? e.fieldType ?? "text").toLowerCase()] ?? "text", r = (e.options ?? e.values ?? []).map((e) => typeof e == "object" && e ? e.value ?? e.label : e);
+function l(e) {
+	let t = e.name ?? e.fieldName ?? e.key ?? e.field, n = c[String(e.type ?? e.fieldType ?? "text").toLowerCase()] ?? "text", r = (e.options ?? e.values ?? []).map((e) => typeof e == "object" && e ? e.value ?? e.label : e);
 	return {
 		name: t,
 		label: e.label ?? e.displayName ?? e.title ?? t,
@@ -107,21 +111,21 @@ function c(e) {
 		options: r
 	};
 }
-function l(e) {
+function u(e) {
 	let t = e?.metadata ?? e ?? {}, n = t.fields ?? t.columns ?? e?.fields ?? [];
 	return {
 		screenId: t.screenId ?? t.screenKey ?? t.screenName ?? t.id ?? "screen",
 		title: t.title ?? t.screenTitle ?? t.screenName ?? "",
-		fields: n.map(c).filter((e) => e.name)
+		fields: n.map(l).filter((e) => e.name)
 	};
 }
-function u(t) {
+function d(t) {
 	let n = t?.metadata ?? {}, r = t?.permissions ?? n.permissions ?? t?.runtime?.permissions ?? t?.allowedActions ?? n.allowedActions ?? null;
 	if (r && !Array.isArray(r) && typeof r == "object") {
 		let e = r.allowedActions ?? r.AllowedActions ?? r.actions ?? r.permissions;
 		Array.isArray(e) && (r = e);
 	}
-	if (!r || typeof r != "object") return console.warn("[crud template] "), { ...e };
+	if (!r || typeof r != "object") return console.warn("[crud template] No permissions found in context; all actions disabled."), { ...e };
 	let i = {};
 	Array.isArray(r) ? r.forEach((e) => {
 		if (typeof e == "string") i[e.trim().toLowerCase()] = !0;
@@ -156,11 +160,11 @@ function u(t) {
 		])
 	};
 }
-function d(e) {
+function f(e) {
 	let t = e?.runtime ?? {}, n = {};
 	return typeof t.storage?.list == "function" && typeof t.storage?.save == "function" && (n.storage = t.storage), typeof t.toast == "function" && (n.toast = t.toast), n;
 }
-function f(e, t) {
+function p(e, t) {
 	let n = null;
 	return {
 		contractVersion: 1,
@@ -170,10 +174,10 @@ function f(e, t) {
 			let r = document.createElement("div");
 			return r.className = "vc-host", n = e(r, {
 				metadata: {
-					...l(t),
-					permissions: u(t)
+					...u(t),
+					permissions: d(t)
 				},
-				runtime: d(t)
+				runtime: f(t)
 			}), r;
 		},
 		destroy() {
@@ -183,29 +187,29 @@ function f(e, t) {
 }
 //#endregion
 //#region src/crud-modal.js
-function p(e, { metadata: t, runtime: r }) {
-	let s = i(t, r), c = null, l = a(t, {
+function m(e, { metadata: n, runtime: r }) {
+	let i = a(n, r), c = null, l = o(n, {
 		onAdd: () => p(null),
 		onEdit: p,
 		onDelete: (e) => {
-			s.remove(e) && l.render(s.rows);
+			i.remove(e) && l.render(i.rows);
 		}
-	}), u = n("h3", "dialog-title"), d = o(t, {
+	}), u = t("h3", "dialog-title"), d = s(n, {
 		onSubmit: (e) => {
-			s.save(c, e), l.render(s.rows), f.close();
+			i.save(c, e), l.render(i.rows), f.close();
 		},
 		onCancel: () => f.close()
-	}), f = n("dialog", "dialog", {}, u, d.form);
+	}), f = t("dialog", "dialog", {}, u, d.form);
 	f.onclose = () => {
 		c = null;
 	};
 	function p(e) {
 		c = e ? e.id : null, u.textContent = e ? "Edit record" : "New record", d.fill(e), f.showModal(), d.focus();
 	}
-	return e.replaceChildren(l.main, f), l.render(s.rows), { destroy: () => {
+	return e.replaceChildren(l.main, f), l.render(i.rows), { destroy: () => {
 		f.open && f.close(), e.replaceChildren();
 	} };
 }
-var m = f(p, ["CRUD-MODAL"]);
+var h = p(m, ["CRUD-MODAL"]);
 //#endregion
-export { m as default };
+export { h as default };
