@@ -1,47 +1,113 @@
+// ============================================================
+// common.js
+// Template helpers + core app adapter (pluginloader contract v1)
+//
+// CSS rule: templates never hardcode CSS. All class names come
+// from CLS below, which maps to the core app's style.css.
+// ============================================================
+
 export const NONE_ALLOWED = { create: false, edit: false, delete: false };
 
-export const localStore = {
-  list: (key) => JSON.parse(localStorage.getItem(key) || "[]"),
-  save: (key, rows) => localStorage.setItem(key, JSON.stringify(rows)),
-};
+// ============================================================
+// DOM HELPER
+// el(tag, className, props, ...children)
+// ============================================================
+
 export const el = (tag, cls, props = {}, ...kids) => {
   const n = document.createElement(tag);
-  n.className = "vc-" + cls;
+  if (cls) n.className = cls;
   Object.assign(n, props);
   n.append(...kids);
   return n;
 };
+
+// ============================================================
+// CORE CSS CLASS MAPPING (single connection to style.css)
+// ============================================================
+
+export const CLS = {
+  screenCard: "screen-card",
+  header: "screen-header",
+  title: "screen-title",
+  tableWrap: "table-container",
+  table: "data-table",
+  actions: "table-actions",
+  empty: "empty-state",
+  form: "dynamic-form",
+  field: "form-field",
+  label: "form-label",
+  control: "form-control",
+  formActions: "form-actions",
+  btn: {
+    primary: "primary-button",
+    secondary: "secondary-button",
+    danger: "danger-button",
+  },
+};
+
+export const btn = (
+  variant,
+  text,
+  fn,
+  { compact = false, type = "button" } = {},
+) => {
+  const props = { type, textContent: text };
+  if (typeof fn === "function") props.onclick = fn;
+  return el(
+    "button",
+    (CLS.btn[variant] || CLS.btn.secondary) +
+      (compact ? " compact-button" : ""),
+    props,
+  );
+};
+
+// ============================================================
+// INPUT
+// ============================================================
+
 export const makeInput = (f, value = "") => {
   let i;
   if (f.type === "select") {
     i = el(
       "select",
-      "input",
+      CLS.control,
       {},
-      el("option", "option", { value: "", textContent: "Select" }),
-      ...f.options.map((o) =>
-        el("option", "option", { value: o, textContent: o }),
-      ),
+      el("option", "", { value: "", textContent: "Select" }),
+      ...f.options.map((o) => el("option", "", { value: o, textContent: o })),
     );
   } else if (f.type === "textarea") {
-    i = el("textarea", "input", { rows: 3 });
+    i = el("textarea", CLS.control, { rows: 3 });
   } else {
-    i = el("input", "input", { type: f.type || "text" });
+    i = el("input", CLS.control, { type: f.type || "text" });
   }
   i.required = !!f.required;
   i.name = f.name;
   i.value = value;
   return i;
 };
+
+// ============================================================
+// SETUP (rows + save/remove)
+// Storage comes only from the core app (runtime.storage).
+// ============================================================
+
 export function setup(metadata, runtime = {}) {
-  const store = runtime.storage || localStore;
+  const store = runtime.storage;
   const toast = runtime.toast || ((m) => console.log(m));
   const key = `crud:${metadata.screenId}`;
-  let rows = store.list(key);
+
+  if (!store) {
+    console.warn(
+      "[crud template] runtime.storage not provided by core app; data will not be saved.",
+    );
+  }
+
+  let rows = store ? store.list(key) : [];
   const persist = (next) => {
     rows = next;
-    store.save(key, rows);
+    store?.save(key, rows);
   };
+
   return {
     get rows() {
       return rows;
@@ -63,72 +129,74 @@ export function setup(metadata, runtime = {}) {
     },
   };
 }
+
+// ============================================================
+// LIST BUILDER
+// ============================================================
+
 export function buildList(metadata, { onAdd, onEdit, onDelete }) {
   const perms = metadata.permissions || NONE_ALLOWED;
-  const addBtn = el("button", "btn", {
-    type: "button",
-    textContent: "Add",
-    onclick: onAdd,
-  });
-  const tbody = el("tbody", "tbody");
-  const empty = el("p", "empty", { textContent: "No records yet." });
+
+  const tbody = el("tbody", "");
+  const empty = el("p", CLS.empty, { textContent: "No records yet." });
+
   const table = el(
     "table",
-    "table",
+    CLS.table,
     {},
     el(
       "thead",
-      "thead",
+      "",
       {},
       el(
         "tr",
-        "tr",
+        "",
         {},
-        ...metadata.fields.map((f) => el("th", "th", { textContent: f.label })),
-        el("th", "th"),
+        ...metadata.fields.map((f) => el("th", "", { textContent: f.label })),
+        el("th", "", { textContent: "Actions" }),
       ),
     ),
     tbody,
   );
+
   const header = el(
     "header",
-    "header",
+    CLS.header,
     {},
-    el("h2", "title", { textContent: metadata.title }),
-    ...(perms.create ? [addBtn] : []),
+    el("h2", CLS.title, { textContent: metadata.title }),
+    ...(perms.create ? [btn("primary", "Add", onAdd)] : []),
   );
-  header.style.display = "flex";
-  header.style.justifyContent = "space-between";
-  const main = el("section", "main", {}, header, table, empty);
+
+  const main = el(
+    "section",
+    CLS.screenCard,
+    {},
+    header,
+    el("div", CLS.tableWrap, {}, table),
+    empty,
+  );
+
   const render = (rows) => {
     tbody.replaceChildren(
       ...rows.map((r) =>
         el(
           "tr",
-          "tr",
+          "",
           {},
           ...metadata.fields.map((f) =>
-            el("td", "td", { textContent: r[f.name] ?? "" }),
+            el("td", "", { textContent: r[f.name] ?? "" }),
           ),
           el(
             "td",
-            "td",
+            CLS.actions,
             {},
             ...(perms.edit
-              ? [
-                  el("button", "btn-link", {
-                    type: "button",
-                    textContent: "Edit",
-                    onclick: () => onEdit(r),
-                  }),
-                ]
+              ? [btn("secondary", "Edit", () => onEdit(r), { compact: true })]
               : []),
             ...(perms.delete
               ? [
-                  el("button", "btn-danger", {
-                    type: "button",
-                    textContent: "Delete",
-                    onclick: () => onDelete(r.id),
+                  btn("danger", "Delete", () => onDelete(r.id), {
+                    compact: true,
                   }),
                 ]
               : []),
@@ -139,41 +207,44 @@ export function buildList(metadata, { onAdd, onEdit, onDelete }) {
     empty.hidden = rows.length > 0;
     table.hidden = rows.length === 0;
   };
+
   return { main, render };
 }
+
+// ============================================================
+// FORM BUILDER
+// ============================================================
+
 export function buildForm(metadata, { onSubmit, onCancel }) {
   const inputs = {};
-  const form = el("form", "form");
-  form.style.display = "flex";
-  form.style.flexDirection = "column";
+  const form = el("form", CLS.form);
+
   metadata.fields.forEach((f) => {
     const i = makeInput(f);
     inputs[f.name] = i;
     form.append(
       el(
-        "label",
-        "field",
+        "div",
+        CLS.field,
         {},
-        el("span", "label", {
+        el("label", CLS.label, {
           textContent: f.label + (f.required ? " *" : ""),
         }),
         i,
       ),
     );
   });
+
   form.append(
     el(
       "div",
-      "actions",
+      CLS.formActions,
       {},
-      el("button", "btn", { type: "submit", textContent: "Save" }),
-      el("button", "btn-secondary", {
-        type: "button",
-        textContent: "Cancel",
-        onclick: onCancel,
-      }),
+      btn("primary", "Save", null, { type: "submit" }),
+      btn("secondary", "Cancel", onCancel),
     ),
   );
+
   form.onsubmit = (e) => {
     e.preventDefault();
     onSubmit(
@@ -182,6 +253,7 @@ export function buildForm(metadata, { onSubmit, onCancel }) {
       ),
     );
   };
+
   return {
     form,
     fill: (row) =>
@@ -194,8 +266,10 @@ export function buildForm(metadata, { onSubmit, onCancel }) {
 
 // ============================================================
 // CORE APP ADAPTER (pluginloader contract v1)
-// mount(container, {metadata, runtime})  ->  { contractVersion, supportedScreenTypes, render, destroy }
+// mount(container, {metadata, runtime})
+//   -> { contractVersion, supportedScreenTypes, render, destroy }
 // ============================================================
+
 const TYPE_MAP = {
   string: "text",
   text: "text",
@@ -227,8 +301,7 @@ function normalizeField(f) {
   };
 }
 
-// Core app context -> template metadata.
-
+// Core app context -> template metadata
 function normalize(context) {
   const meta = context?.metadata ?? context ?? {};
   const rawFields = meta.fields ?? meta.columns ?? context?.fields ?? [];
@@ -242,15 +315,13 @@ function normalize(context) {
 
 // Core app permissions -> { create, edit, delete }
 //
-// Backend-la permission = ActionCode (Create / Read / Update / Delete / Approve),
-
+// Backend permission = ActionCode (Create / Read / Update / Delete / Approve).
+// Supported shapes:
 //   1. ["Create", "Update"]                              (ActionCode list)
 //   2. [{ actionCode: "Create" }, ...]                   (PermissionDefinition list)
-//   3. [{ actionCode: "Delete", isAllowed: false }, ...] (RoleAccessAction maari)
+//   3. [{ actionCode: "Delete", isAllowed: false }, ...] (RoleAccessAction style)
 //   4. { canCreate: true, canEdit: true, canDelete: false }
-//   5. { allowedActions: [...] }                         (AdminNavigationItem maari)
-// Core app context.permissions ( metadata.permissions / allowedActions) 
-
+//   5. { allowedActions: [...] }                         (AdminNavigationItem style)
 function readPermissions(context) {
   const meta = context?.metadata ?? {};
   let src =
@@ -273,7 +344,7 @@ function readPermissions(context) {
 
   if (!src || typeof src !== "object") {
     console.warn(
-      "[crud template] ",
+      "[crud template] No permissions found in context; all actions disabled.",
     );
     return { ...NONE_ALLOWED };
   }
