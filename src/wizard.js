@@ -13,12 +13,7 @@ const TYPE_MAP = {
   lookup: "select",
 };
 
-const localStore = {
-  list: (key) => JSON.parse(localStorage.getItem(key) || "[]"),
-  save: (key, rows) => localStorage.setItem(key, JSON.stringify(rows)),
-};
-
-// class name = "vc-" + cls 
+// class name = "vc-" + cls
 const h = (tag, cls, props = {}, ...kids) => {
   const n = document.createElement(tag);
   if (cls)
@@ -55,7 +50,6 @@ function normalize(context) {
 
   let steps = meta.steps ?? context?.steps;
   if (!Array.isArray(steps)) {
-    
     const flat = meta.fields ?? meta.columns ?? context?.fields ?? [];
     steps = flat.length ? [{ title: title || "Details", fields: flat }] : [];
   }
@@ -94,7 +88,6 @@ function makeInput(f, value) {
   return i;
 }
 
-
 let host = null;
 
 export default {
@@ -104,11 +97,12 @@ export default {
   render(context) {
     const cfg = normalize(context);
     const rt = context?.runtime ?? {};
+    // Storage comes only from the core app (no localStorage fallback)
     const store =
       typeof rt.storage?.list === "function" &&
       typeof rt.storage?.save === "function"
         ? rt.storage
-        : localStore;
+        : null;
     const toast =
       typeof rt.toast === "function" ? rt.toast : (m) => console.log(m);
 
@@ -135,14 +129,18 @@ export default {
     function finish() {
       const record = { ...values };
       if (typeof rt.onFinish === "function") {
-        rt.onFinish(record); 
-      } else {
+        rt.onFinish(record);
+      } else if (store) {
         const key = `crud:${cfg.screenId}`;
         const rows = store.list(key);
         store.save(key, [
           ...(Array.isArray(rows) ? rows : []),
           { id: Date.now(), ...record },
         ]);
+      } else {
+        console.warn(
+          "[wizard] runtime.storage / runtime.onFinish not provided by core app; data will not be saved.",
+        );
       }
       toast("Saved");
       finished = true;

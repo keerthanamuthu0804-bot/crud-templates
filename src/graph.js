@@ -61,16 +61,14 @@ function normalize(context) {
   const screenId =
     meta.screenId ?? meta.screenKey ?? meta.screenName ?? meta.id ?? "screen";
 
-  // rows: metadata.data / context.data / context.rows,  storage
+  // rows: metadata.data / context.data / context.rows / runtime.storage
+  // (no localStorage fallback; storage comes only from the core app)
   let rows = meta.data ?? context?.data ?? context?.rows;
   if (!Array.isArray(rows)) {
     const key = chart.dataKey ?? `crud:${screenId}`;
     const rt = context?.runtime ?? {};
     try {
-      rows =
-        typeof rt.storage?.list === "function"
-          ? rt.storage.list(key)
-          : JSON.parse(localStorage.getItem(key) || "[]");
+      rows = typeof rt.storage?.list === "function" ? rt.storage.list(key) : [];
     } catch {
       rows = [];
     }
