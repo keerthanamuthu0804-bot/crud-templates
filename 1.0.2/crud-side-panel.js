@@ -20,7 +20,7 @@ var e = {
 	}))) : e.type === "textarea" ? n("textarea", "input", { rows: 3 }) : n("input", "input", { type: e.type || "text" }), r.required = !!e.required, r.name = e.name, r.value = t, r;
 };
 function i(e, n = {}) {
-	let r = n.storage || t, i = n.toast || ((e) => console.log(e)), a = `crud:${e.screenId}`, o = r.list(a), s = (e) => {
+	let r = n.storage || t, i = n.toast || ((e) => console.log(e)), a = crud:${e.screenId}, o = r.list(a), s = (e) => {
 		o = e, r.save(a, o);
 	};
 	return {
