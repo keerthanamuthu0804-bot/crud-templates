@@ -1,13 +1,13 @@
 {
   "name": "react-app",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:templates": "node build.js",
-    "deploy": "npm run build:templates && gh-pages -d dist-templates -e 1.0.6 -a",
+    "deploy": "npm run build:templates && gh-pages -d dist-templates -e 1.0.7 -a",
     "preview": "vite preview"
   },
   "dependencies": {

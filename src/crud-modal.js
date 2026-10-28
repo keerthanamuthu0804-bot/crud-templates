@@ -1,27 +1,36 @@
-import { setup, el, buildList, buildForm, createRenderer } from "./common.js";
+import {
+  setup,
+  el,
+  buildList,
+  buildForm,
+  createRenderer,
+  CLS,
+} from "./common.js";
 
-function mount(container, { metadata, runtime }) {
-  const app = setup(metadata, runtime);
+function mount(container, { metadata, platform }) {
+  const app = setup(metadata, platform);
   let editingId = null;
 
   const list = buildList(metadata, {
     onAdd: () => open(null),
     onEdit: open,
-    onDelete: (id) => {
-      if (app.remove(id)) list.render(app.rows);
+    onDelete: async (id) => {
+      if (await app.remove(id)) list.render(app.rows);
     },
   });
 
-  const title = el("h3", "dialog-title");
+  const title = el("h3", CLS.dialogTitle);
   const f = buildForm(metadata, {
-    onSubmit: (values) => {
-      app.save(editingId, values);
-      list.render(app.rows);
-      dialog.close();
+    // close the dialog only after the platform confirmed the save
+    onSubmit: async (values) => {
+      if (await app.save(editingId, values)) {
+        list.render(app.rows);
+        dialog.close();
+      }
     },
     onCancel: () => dialog.close(),
   });
-  const dialog = el("dialog", "dialog", {}, title, f.form);
+  const dialog = el("dialog", CLS.dialog, {}, title, f.form);
   dialog.onclose = () => {
     editingId = null;
   };

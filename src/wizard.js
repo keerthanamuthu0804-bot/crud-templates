@@ -1,17 +1,4 @@
-const TYPE_MAP = {
-  string: "text",
-  text: "text",
-  number: "number",
-  int: "number",
-  integer: "number",
-  decimal: "number",
-  date: "date",
-  datetime: "date",
-  textarea: "textarea",
-  select: "select",
-  dropdown: "select",
-  lookup: "select",
-};
+import { normalizeField, readActions, readToast } from "./common.js";
 
 // class name = "vc-" + cls
 const h = (tag, cls, props = {}, ...kids) => {
@@ -27,25 +14,10 @@ const h = (tag, cls, props = {}, ...kids) => {
 };
 
 // ---------- core app context -> template format ----------
-function normalizeField(f) {
-  const name = f.name ?? f.fieldName ?? f.key ?? f.field;
-  const type =
-    TYPE_MAP[String(f.type ?? f.fieldType ?? "text").toLowerCase()] ?? "text";
-  const options = (f.options ?? f.values ?? []).map((o) =>
-    typeof o === "object" && o !== null ? (o.value ?? o.label) : o,
-  );
-  return {
-    name,
-    label: f.label ?? f.displayName ?? f.title ?? name,
-    type,
-    options,
-  };
-}
-
+// steps <- metadata.steps = [{ id, title, description, fields: [...] }]
+// (without steps, metadata.fields becomes a single step)
 function normalize(context) {
   const meta = context?.metadata ?? context ?? {};
-  const screenId =
-    meta.screenId ?? meta.screenKey ?? meta.screenName ?? meta.id ?? "screen";
   const title = meta.title ?? meta.screenTitle ?? meta.screenName ?? "";
 
   let steps = meta.steps ?? context?.steps;
@@ -63,7 +35,7 @@ function normalize(context) {
       .filter((f) => f.name),
   }));
 
-  return { screenId, title, steps };
+  return { title, steps };
 }
 
 function makeInput(f, value) {
@@ -84,6 +56,7 @@ function makeInput(f, value) {
     i = h("input", "input", { type: f.type || "text" });
   }
   i.name = f.name;
+  i.required = !!f.required; // browser validates on "Next" / "Finish"
   i.value = value ?? "";
   return i;
 }
@@ -96,15 +69,12 @@ export default {
 
   render(context) {
     const cfg = normalize(context);
-    const rt = context?.runtime ?? {};
-    // Storage comes only from the core app (no localStorage fallback)
-    const store =
-      typeof rt.storage?.list === "function" &&
-      typeof rt.storage?.save === "function"
-        ? rt.storage
-        : null;
-    const toast =
-      typeof rt.toast === "function" ? rt.toast : (m) => console.log(m);
+    const toast = readToast(context);
+    // Saving goes through the platform create action only.
+    // "onFinish" is accepted as an alias for create.
+    const actions = readActions(context);
+    const create =
+      actions.create ?? context?.runtime?.onFinish ?? context?.onFinish ?? null;
 
     host = h("div", "host");
     host.append(h("h2", "title", { textContent: cfg.title }));
@@ -121,34 +91,40 @@ export default {
     let values = {};
     let index = 0;
     let finished = false;
+    let saving = false;
+    let error = "";
     let inputs = [];
 
     const collect = () =>
       inputs.forEach(({ name, input }) => (values[name] = input.value));
 
-    function finish() {
-      const record = { ...values };
-      if (typeof rt.onFinish === "function") {
-        rt.onFinish(record);
-      } else if (store) {
-        const key = `crud:${cfg.screenId}`;
-        const rows = store.list(key);
-        store.save(key, [
-          ...(Array.isArray(rows) ? rows : []),
-          { id: Date.now(), ...record },
-        ]);
-      } else {
-        console.warn(
-          "[wizard] runtime.storage / runtime.onFinish not provided by core app; data will not be saved.",
-        );
+    // success is shown only after the platform confirms the save
+    async function finish() {
+      if (saving) return;
+      if (typeof create !== "function") {
+        console.warn("[wizard] platform create action not provided.");
+        error = "Saving is not available.";
+        draw();
+        return;
       }
-      toast("Saved");
-      finished = true;
+      saving = true;
+      error = "";
+      draw();
+      try {
+        await create({ ...values });
+        toast("Saved");
+        finished = true;
+      } catch (e) {
+        console.error("[wizard] save failed", e);
+        error = e?.message || "Save failed. Please try again.";
+      }
+      saving = false;
       draw();
     }
 
     function go(dir) {
       collect();
+      error = "";
       if (dir > 0 && index === cfg.steps.length - 1) return finish();
       index += dir;
       draw();
@@ -172,7 +148,7 @@ export default {
             h("span", "step-num", { textContent: done ? "✓" : String(i + 1) }),
             h("span", "step-label", { textContent: st.title }),
           );
-          if (!finished && i < index) {
+          if (!finished && !saving && i < index) {
             li.onclick = () => {
               collect();
               index = i;
@@ -202,6 +178,7 @@ export default {
                 values = {};
                 index = 0;
                 finished = false;
+                error = "";
                 draw();
               },
             }),
@@ -218,17 +195,22 @@ export default {
 
       step.fields.forEach((f) => {
         const input = makeInput(f, values[f.name]);
+        input.disabled = saving;
         inputs.push({ name: f.name, input });
         form.append(
           h(
             "label",
             "field",
             {},
-            h("span", "label", { textContent: f.label }),
+            h("span", "label", {
+              textContent: f.label + (f.required ? " *" : ""),
+            }),
             input,
           ),
         );
       });
+
+      if (error) form.append(h("p", "error", { textContent: error }));
 
       form.append(
         h(
@@ -240,13 +222,15 @@ export default {
                 h("button", "btn-secondary", {
                   type: "button",
                   textContent: "Back",
+                  disabled: saving,
                   onclick: () => go(-1),
                 }),
               ]
             : []),
           h("button", "btn", {
             type: "submit",
-            textContent: last ? "Finish" : "Next",
+            disabled: saving,
+            textContent: saving ? "Saving..." : last ? "Finish" : "Next",
           }),
         ),
       );
@@ -262,7 +246,7 @@ export default {
           : []),
         form,
       );
-      inputs[0]?.input.focus();
+      if (!saving) inputs[0]?.input.focus();
     }
 
     draw();

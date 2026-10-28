@@ -1,34 +1,40 @@
-import { setup, el, buildList, buildForm, createRenderer } from "./common.js";
+import {
+  setup,
+  el,
+  btn,
+  buildList,
+  buildForm,
+  createRenderer,
+  CLS,
+} from "./common.js";
 
-function mount(container, { metadata, runtime }) {
-  const app = setup(metadata, runtime);
+function mount(container, { metadata, platform }) {
+  const app = setup(metadata, platform);
   let editingId = null;
 
   const list = buildList(metadata, {
     onAdd: () => open(null),
     onEdit: open,
-    onDelete: (id) => {
-      if (app.remove(id)) list.render(app.rows);
+    onDelete: async (id) => {
+      if (await app.remove(id)) list.render(app.rows);
     },
   });
 
-  const title = el("h2", "title");
+  const title = el("h2", CLS.title);
   const f = buildForm(metadata, {
-    onSubmit: (values) => {
-      app.save(editingId, values);
-      list.render(app.rows);
-      close();
+    // go back to the list only after the platform confirmed the save
+    onSubmit: async (values) => {
+      if (await app.save(editingId, values)) {
+        list.render(app.rows);
+        close();
+      }
     },
-    onCancel: close,
+    onCancel: () => close(),
   });
-  const back = el("button", "btn-link", {
-    type: "button",
-    textContent: "Back to list",
-    onclick: close,
-  });
+  const back = btn("secondary", "Back to list", () => close());
   const formView = el(
     "section",
-    "form-page",
+    CLS.formPage,
     { hidden: true },
     back,
     title,

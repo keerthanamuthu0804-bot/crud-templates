@@ -1,3 +1,5 @@
+import { readRecords, normalizeField } from "./common.js";
+
 const NS = "http://www.w3.org/2000/svg";
 
 const PALETTE = [
@@ -55,39 +57,43 @@ const shorten = (str, n = 12) =>
   str.length > n ? str.slice(0, n - 1) + "…" : str;
 
 // ---------- read core app context ----------
+// rows   <- context.records
+// config <- metadata.chart = { type, xField, series, aggregate }
+//   type      : "bar" | "line" | "pie" | "donut"      (default "bar")
+//   xField    : field used for labels
+//   series    : ["amount"] or [{ field, label }]      (values)
+//   aggregate : "sum" | "avg" | "count" | "min" | "max" (default "sum")
+// If xField / series are missing they are derived from metadata.fields:
+//   xField = first non-number field, series = number-type fields.
 function normalize(context) {
   const meta = context?.metadata ?? context ?? {};
   const chart = meta.chart ?? meta.graph ?? {};
-  const screenId =
-    meta.screenId ?? meta.screenKey ?? meta.screenName ?? meta.id ?? "screen";
+  const rows = readRecords(context);
 
-  // rows: metadata.data / context.data / context.rows / runtime.storage
-  // (no localStorage fallback; storage comes only from the core app)
-  let rows = meta.data ?? context?.data ?? context?.rows;
-  if (!Array.isArray(rows)) {
-    const key = chart.dataKey ?? `crud:${screenId}`;
-    const rt = context?.runtime ?? {};
-    try {
-      rows = typeof rt.storage?.list === "function" ? rt.storage.list(key) : [];
-    } catch {
-      rows = [];
-    }
-  }
-  if (!Array.isArray(rows)) rows = [];
+  const fields = (meta.fields ?? meta.columns ?? [])
+    .map(normalizeField)
+    .filter((f) => f.name);
+  const labelOf = (name) => fields.find((f) => f.name === name)?.label ?? name;
 
-  const xField = chart.xField ?? chart.x ?? Object.keys(rows[0] ?? {})[0];
+  const xField =
+    chart.xField ??
+    chart.x ??
+    (fields.find((f) => f.type !== "number") ?? fields[0])?.name;
 
   let series =
     chart.series ?? chart.yFields ?? (chart.yField ? [chart.yField] : null);
   if (!series) {
-    series = Object.keys(rows[0] ?? {}).filter(
-      (k) => k !== xField && k !== "id" && Number.isFinite(Number(rows[0][k])),
-    );
+    series = fields
+      .filter((f) => f.type === "number" && f.name !== xField)
+      .map((f) => f.name);
   }
   series = series.map((x) =>
     typeof x === "string"
-      ? { field: x, label: x }
-      : { field: x.field ?? x.name, label: x.label ?? x.field ?? x.name },
+      ? { field: x, label: labelOf(x) }
+      : {
+          field: x.field ?? x.name,
+          label: x.label ?? labelOf(x.field ?? x.name),
+        },
   );
 
   return {

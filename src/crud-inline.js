@@ -1,111 +1,143 @@
 import {
   setup,
   el,
+  btn,
   makeInput,
   createRenderer,
+  CLS,
   NONE_ALLOWED,
 } from "./common.js";
-function mount(container, { metadata, runtime }) {
-  const app = setup(metadata, runtime);
+
+function mount(container, { metadata, platform }) {
+  const app = setup(metadata, platform);
   const perms = metadata.permissions || NONE_ALLOWED;
-  let editing = null;
-  const btn = (cls, text, fn) =>
-    el("button", cls, { type: "button", textContent: text, onclick: fn });
-  const tbody = el("tbody", "tbody");
-  const empty = el("p", "empty", { textContent: "No records yet." });
+  let editing = null; // null | "new" | record id
+  let busy = false;
+
+  const tbody = el("tbody", "");
+  const empty = el("p", CLS.empty, { textContent: "No records yet." });
   const table = el(
     "table",
-    "table",
+    CLS.table,
     {},
     el(
       "thead",
-      "thead",
+      "",
       {},
       el(
         "tr",
-        "tr",
+        "",
         {},
-        ...metadata.fields.map((f) => el("th", "th", { textContent: f.label })),
-        el("th", "th"),
+        ...metadata.fields.map((f) => el("th", "", { textContent: f.label })),
+        el("th", "", { textContent: "Actions" }),
       ),
     ),
     tbody,
   );
   const header = el(
     "header",
-    "header",
+    CLS.header,
     {},
-    el("h2", "title", { textContent: metadata.title }),
+    el("h2", CLS.title, { textContent: metadata.title }),
     ...(perms.create
       ? [
-          btn("btn", "Add", () => {
+          btn("primary", "Add", () => {
             editing = "new";
             render();
           }),
         ]
       : []),
   );
-  header.style.display = "flex";
-  header.style.justifyContent = "space-between";
-  const root = el("section", "main", {}, header, table, empty);
+  const root = el(
+    "section",
+    CLS.screenCard,
+    {},
+    header,
+    el("div", CLS.tableWrap, {}, table),
+    empty,
+  );
+
   function viewRow(r) {
     return el(
       "tr",
-      "tr",
+      "",
       {},
       ...metadata.fields.map((f) =>
-        el("td", "td", { textContent: r[f.name] ?? "" }),
+        el("td", "", { textContent: r[f.name] ?? "" }),
       ),
       el(
         "td",
-        "td",
+        CLS.actions,
         {},
         ...(perms.edit
           ? [
-              btn("btn-link", "Edit", () => {
-                editing = r.id;
-                render();
-              }),
+              btn(
+                "secondary",
+                "Edit",
+                () => {
+                  editing = r.id;
+                  render();
+                },
+                { compact: true },
+              ),
             ]
           : []),
         ...(perms.delete
           ? [
-              btn("btn-danger", "Delete", () => {
-                if (app.remove(r.id)) render();
-              }),
+              btn(
+                "danger",
+                "Delete",
+                async () => {
+                  if (busy) return;
+                  busy = true;
+                  const ok = await app.remove(r.id);
+                  busy = false;
+                  if (ok) render();
+                },
+                { compact: true },
+              ),
             ]
           : []),
       ),
     );
   }
+
   function editRow(r) {
     const inputs = metadata.fields.map((f) => makeInput(f, r[f.name] ?? ""));
-    const save = () => {
-      if (!inputs.every((i) => i.reportValidity())) return;
+    const save = async () => {
+      if (busy || !inputs.every((i) => i.reportValidity())) return;
+      busy = true;
       const values = Object.fromEntries(
         metadata.fields.map((f, i) => [f.name, inputs[i].value]),
       );
-      app.save(editing === "new" ? null : editing, values);
-      editing = null;
+      const ok = await app.save(editing === "new" ? null : editing, values);
+      busy = false;
+      if (ok) editing = null;
       render();
     };
     return el(
       "tr",
-      "tr vc-editing",
+      CLS.editingRow,
       {},
-      ...inputs.map((i) => el("td", "td", {}, i)),
+      ...inputs.map((i) => el("td", "", {}, i)),
       el(
         "td",
-        "td",
+        CLS.actions,
         {},
-        btn("btn", "Save", save),
-        btn("btn-secondary", "Cancel", () => {
-          editing = null;
-          render();
-        }),
+        btn("primary", "Save", save, { compact: true }),
+        btn(
+          "secondary",
+          "Cancel",
+          () => {
+            editing = null;
+            render();
+          },
+          { compact: true },
+        ),
       ),
     );
   }
+
   function render() {
     tbody.replaceChildren(
       ...(editing === "new" ? [editRow({})] : []),
@@ -115,6 +147,7 @@ function mount(container, { metadata, runtime }) {
     table.hidden = !showTable;
     empty.hidden = showTable;
   }
+
   container.replaceChildren(root);
   render();
   return { destroy: () => container.replaceChildren() };

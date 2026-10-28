@@ -1,36 +1,42 @@
-import { setup, el, buildList, buildForm, createRenderer } from "./common.js";
+import {
+  setup,
+  el,
+  buildList,
+  buildForm,
+  createRenderer,
+  CLS,
+} from "./common.js";
 
-function mount(container, { metadata, runtime }) {
-  const app = setup(metadata, runtime);
+function mount(container, { metadata, platform }) {
+  const app = setup(metadata, platform);
   let editingId = null;
 
   const list = buildList(metadata, {
     onAdd: () => open(null),
     onEdit: open,
-    onDelete: (id) => {
-      if (app.remove(id)) {
+    onDelete: async (id) => {
+      if (await app.remove(id)) {
         list.render(app.rows);
         if (id === editingId) close();
       }
     },
   });
 
-  const title = el("h3", "panel-title");
+  const title = el("h3", CLS.panelTitle);
   const f = buildForm(metadata, {
-    onSubmit: (values) => {
-      app.save(editingId, values);
-      list.render(app.rows);
-      close();
+    // close the panel only after the platform confirmed the save
+    onSubmit: async (values) => {
+      if (await app.save(editingId, values)) {
+        list.render(app.rows);
+        close();
+      }
     },
-    onCancel: close,
+    onCancel: () => close(),
   });
-  const panel = el("aside", "panel", { hidden: true }, title, f.form);
+  const panel = el("aside", CLS.panel, { hidden: true }, title, f.form);
 
-  const root = el("div", "root", {}, list.main, panel);
-  root.style.display = "flex";
-  root.style.alignItems = "flex-start";
-  list.main.style.flex = "1";
-  panel.style.width = "340px";
+  // layout comes from style.css (.screen-split / .side-panel)
+  const root = el("div", CLS.split, {}, list.main, panel);
 
   function open(row) {
     editingId = row ? row.id : null;
