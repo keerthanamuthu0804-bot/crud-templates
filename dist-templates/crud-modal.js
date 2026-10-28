@@ -3,88 +3,88 @@ var e = {
 	create: !1,
 	edit: !1,
 	delete: !1
-}, t = (e, t, n = {}, ...r) => {
-	let i = document.createElement(e);
-	return t && (i.className = t), Object.assign(i, n), i.append(...r), i;
+}, t = {
+	panelTitle: "panel-title",
+	panel: "side-panel",
+	split: "screen-split"
 }, n = {
-	screenCard: "screen-card",
-	header: "screen-header",
-	title: "screen-title",
-	tableWrap: "table-container",
-	table: "data-table",
-	actions: "table-actions",
-	empty: "empty-state",
-	form: "dynamic-form",
-	field: "form-field",
-	label: "form-label",
-	control: "form-control",
-	formActions: "form-actions",
-	btn: {
-		primary: "primary-button",
-		secondary: "secondary-button",
-		danger: "danger-button"
-	}
-}, r = (e, r, i, { compact: a = !1, type: o = "button" } = {}) => {
-	let s = {
-		type: o,
-		textContent: r
-	};
-	return typeof i == "function" && (s.onclick = i), t("button", (n.btn[e] || n.btn.secondary) + (a ? " compact-button" : ""), s);
-}, i = (e, r = "") => {
-	let i;
-	return i = e.type === "select" ? t("select", n.control, {}, t("option", "", {
+	list: (e) => JSON.parse(localStorage.getItem(e) || "[]"),
+	save: (e, t) => localStorage.setItem(e, JSON.stringify(t))
+}, r = (e, t, n = {}, ...r) => {
+	let i = document.createElement(e);
+	return i.className = "vc-" + t, Object.assign(i, n), i.append(...r), i;
+}, i = (e, t = "") => {
+	let n;
+	return n = e.type === "select" ? r("select", "input", {}, r("option", "option", {
 		value: "",
 		textContent: "Select"
-	}), ...e.options.map((e) => t("option", "", {
+	}), ...e.options.map((e) => r("option", "option", {
 		value: e,
 		textContent: e
-	}))) : e.type === "textarea" ? t("textarea", n.control, { rows: 3 }) : t("input", n.control, { type: e.type || "text" }), i.required = !!e.required, i.name = e.name, i.value = r, i;
+	}))) : e.type === "textarea" ? r("textarea", "input", { rows: 3 }) : r("input", "input", { type: e.type || "text" }), n.required = !!e.required, n.name = e.name, n.value = t, n;
 };
 function a(e, t = {}) {
-	let n = t.storage, r = t.toast || ((e) => console.log(e)), i = `crud:${e.screenId}`;
-	n || console.warn("[crud template] runtime.storage not provided by core app; data will not be saved.");
-	let a = n ? n.list(i) : [], o = (e) => {
-		a = e, n?.save(i, a);
+	let r = t.storage || n, i = t.toast || ((e) => console.log(e)), a = `crud:${e.screenId}`, o = r.list(a), s = (e) => {
+		o = e, r.save(a, o);
 	};
 	return {
 		get rows() {
-			return a;
+			return o;
 		},
-		toast: r,
+		toast: i,
 		save(e, t) {
-			o(e == null ? [...a, {
+			return s(e == null ? [...o, {
 				id: Date.now(),
 				...t
-			}] : a.map((n) => n.id === e ? {
+			}] : o.map((n) => n.id === e ? {
 				...n,
 				...t
-			} : n)), r("Saved");
+			} : n)), i("Saved"), !0;
 		},
 		remove(e) {
-			return confirm("Delete this record?") ? (o(a.filter((t) => t.id !== e)), r("Deleted"), !0) : !1;
+			return confirm("Delete this record?") ? (s(o.filter((t) => t.id !== e)), i("Deleted"), !0) : !1;
 		}
 	};
 }
-function o(i, { onAdd: a, onEdit: o, onDelete: s }) {
-	let c = i.permissions || e, l = t("tbody", ""), u = t("p", n.empty, { textContent: "No records yet." }), d = t("table", n.table, {}, t("thead", "", {}, t("tr", "", {}, ...i.fields.map((e) => t("th", "", { textContent: e.label })), t("th", "", { textContent: "Actions" }))), l), f = t("header", n.header, {}, t("h2", n.title, { textContent: i.title }), ...c.create ? [r("primary", "Add", a)] : []);
-	return {
-		main: t("section", n.screenCard, {}, f, t("div", n.tableWrap, {}, d), u),
+function o(t, { onAdd: n, onEdit: i, onDelete: a }) {
+	let o = t.permissions || e, s = r("button", "btn", {
+		type: "button",
+		textContent: "Add",
+		onclick: n
+	}), c = r("tbody", "tbody"), l = r("p", "empty", { textContent: "No records yet." }), u = r("table", "table", {}, r("thead", "thead", {}, r("tr", "tr", {}, ...t.fields.map((e) => r("th", "th", { textContent: e.label })), r("th", "th"))), c), d = r("header", "header", {}, r("h2", "title", { textContent: t.title }), ...o.create ? [s] : []);
+	return d.style.display = "flex", d.style.justifyContent = "space-between", {
+		main: r("section", "main", {}, d, u, l),
 		render: (e) => {
-			l.replaceChildren(...e.map((e) => t("tr", "", {}, ...i.fields.map((n) => t("td", "", { textContent: e[n.name] ?? "" })), t("td", n.actions, {}, ...c.edit ? [r("secondary", "Edit", () => o(e), { compact: !0 })] : [], ...c.delete ? [r("danger", "Delete", () => s(e.id), { compact: !0 })] : [])))), u.hidden = e.length > 0, d.hidden = e.length === 0;
+			c.replaceChildren(...e.map((e) => r("tr", "tr", {}, ...t.fields.map((t) => r("td", "td", { textContent: e[t.name] ?? "" })), r("td", "td", {}, ...o.edit ? [r("button", "btn-link", {
+				type: "button",
+				textContent: "Edit",
+				onclick: () => i(e)
+			})] : [], ...o.delete ? [r("button", "btn-danger", {
+				type: "button",
+				textContent: "Delete",
+				onclick: () => a(e.id)
+			})] : [])))), l.hidden = e.length > 0, u.hidden = e.length === 0;
 		}
 	};
 }
-function s(e, { onSubmit: a, onCancel: o }) {
-	let s = {}, c = t("form", n.form);
-	return e.fields.forEach((e) => {
-		let r = i(e);
-		s[e.name] = r, c.append(t("div", n.field, {}, t("label", n.label, { textContent: e.label + (e.required ? " *" : "") }), r));
-	}), c.append(t("div", n.formActions, {}, r("primary", "Save", null, { type: "submit" }), r("secondary", "Cancel", o))), c.onsubmit = (t) => {
-		t.preventDefault(), a(Object.fromEntries(e.fields.map((e) => [e.name, s[e.name].value])));
+function s(e, { onSubmit: t, onCancel: n }) {
+	let a = {}, o = r("form", "form");
+	return o.style.display = "flex", o.style.flexDirection = "column", e.fields.forEach((e) => {
+		let t = i(e);
+		a[e.name] = t, o.append(r("label", "field", {}, r("span", "label", { textContent: e.label + (e.required ? " *" : "") }), t));
+	}), o.append(r("div", "actions", {}, r("button", "btn", {
+		type: "submit",
+		textContent: "Save"
+	}), r("button", "btn-secondary", {
+		type: "button",
+		textContent: "Cancel",
+		onclick: n
+	}))), o.onsubmit = (n) => {
+		n.preventDefault(), t(Object.fromEntries(e.fields.map((e) => [e.name, a[e.name].value])));
 	}, {
-		form: c,
-		fill: (t) => e.fields.forEach((e) => s[e.name].value = t ? t[e.name] ?? "" : ""),
-		focus: () => s[e.fields[0].name].focus()
+		form: o,
+		fill: (t) => e.fields.forEach((e) => a[e.name].value = t ? t[e.name] ?? "" : ""),
+		focus: () => a[e.fields[0].name]?.focus()
 	};
 }
 var c = {
@@ -125,7 +125,7 @@ function d(t) {
 		let e = r.allowedActions ?? r.AllowedActions ?? r.actions ?? r.permissions;
 		Array.isArray(e) && (r = e);
 	}
-	if (!r || typeof r != "object") return console.warn("[crud template] No permissions found in context; all actions disabled."), { ...e };
+	if (!r || typeof r != "object") return console.warn("[crud template] permissions kidaikkala, Add/Edit/Delete hide aagudhu."), { ...e };
 	let i = {};
 	Array.isArray(r) ? r.forEach((e) => {
 		if (typeof e == "string") i[e.trim().toLowerCase()] = !0;
@@ -187,27 +187,27 @@ function p(e, t) {
 }
 //#endregion
 //#region src/crud-modal.js
-function m(e, { metadata: n, runtime: r }) {
-	let i = a(n, r), c = null, l = o(n, {
-		onAdd: () => p(null),
-		onEdit: p,
-		onDelete: (e) => {
-			i.remove(e) && l.render(i.rows);
+function m(e, { metadata: n, platform: i }) {
+	let c = a(n, i), l = null, u = o(n, {
+		onAdd: () => m(null),
+		onEdit: m,
+		onDelete: async (e) => {
+			await c.remove(e) && u.render(c.rows);
 		}
-	}), u = t("h3", "dialog-title"), d = s(n, {
-		onSubmit: (e) => {
-			i.save(c, e), l.render(i.rows), f.close();
+	}), d = r("h3", t.dialogTitle), f = s(n, {
+		onSubmit: async (e) => {
+			await c.save(l, e) && (u.render(c.rows), p.close());
 		},
-		onCancel: () => f.close()
-	}), f = t("dialog", "dialog", {}, u, d.form);
-	f.onclose = () => {
-		c = null;
+		onCancel: () => p.close()
+	}), p = r("dialog", t.dialog, {}, d, f.form);
+	p.onclose = () => {
+		l = null;
 	};
-	function p(e) {
-		c = e ? e.id : null, u.textContent = e ? "Edit record" : "New record", d.fill(e), f.showModal(), d.focus();
+	function m(e) {
+		l = e ? e.id : null, d.textContent = e ? "Edit record" : "New record", f.fill(e), p.showModal(), f.focus();
 	}
-	return e.replaceChildren(l.main, f), l.render(i.rows), { destroy: () => {
-		f.open && f.close(), e.replaceChildren();
+	return e.replaceChildren(u.main, p), u.render(c.rows), { destroy: () => {
+		p.open && p.close(), e.replaceChildren();
 	} };
 }
 var h = p(m, ["CRUD-MODAL"]);
